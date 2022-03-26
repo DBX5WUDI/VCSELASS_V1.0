@@ -65,9 +65,10 @@
             this.label11 = new System.Windows.Forms.Label();
             this.ReadPDTxtBox = new System.Windows.Forms.TextBox();
             this.chart1 = new System.Windows.Forms.DataVisualization.Charting.Chart();
-            this.ReadPDRBtn = new System.Windows.Forms.RadioButton();
             this.contextMenuStrip1 = new System.Windows.Forms.ContextMenuStrip(this.components);
             this.toolStripMenuItem1 = new System.Windows.Forms.ToolStripMenuItem();
+            this.PDBox = new System.Windows.Forms.CheckBox();
+            this.PClosedLoopBox2 = new System.Windows.Forms.CheckBox();
             this.panel3.SuspendLayout();
             this.panel2.SuspendLayout();
             ((System.ComponentModel.ISupportInitialize)(this.pictureBox2)).BeginInit();
@@ -101,7 +102,7 @@
             // 
             this.srlbtn.BackColor = System.Drawing.Color.Transparent;
             this.srlbtn.Font = new System.Drawing.Font("黑体", 12F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(134)));
-            this.srlbtn.Location = new System.Drawing.Point(17, 117);
+            this.srlbtn.Location = new System.Drawing.Point(17, 111);
             this.srlbtn.Name = "srlbtn";
             this.srlbtn.Size = new System.Drawing.Size(103, 26);
             this.srlbtn.TabIndex = 6;
@@ -117,7 +118,7 @@
             // 
             this.ShakeHandsbtn.BackColor = System.Drawing.SystemColors.Control;
             this.ShakeHandsbtn.Font = new System.Drawing.Font("黑体", 12F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(134)));
-            this.ShakeHandsbtn.Location = new System.Drawing.Point(17, 166);
+            this.ShakeHandsbtn.Location = new System.Drawing.Point(17, 151);
             this.ShakeHandsbtn.Name = "ShakeHandsbtn";
             this.ShakeHandsbtn.Size = new System.Drawing.Size(103, 26);
             this.ShakeHandsbtn.TabIndex = 8;
@@ -247,9 +248,9 @@
             this.panel3.Controls.Add(this.ShakeHandsbtn);
             this.panel3.Controls.Add(this.srllabel);
             this.panel3.Controls.Add(this.srlbtn);
-            this.panel3.Location = new System.Drawing.Point(772, 512);
+            this.panel3.Location = new System.Drawing.Point(772, 535);
             this.panel3.Name = "panel3";
-            this.panel3.Size = new System.Drawing.Size(137, 220);
+            this.panel3.Size = new System.Drawing.Size(137, 197);
             this.panel3.TabIndex = 26;
             // 
             // panel2
@@ -426,7 +427,7 @@
             this.ReadPDTxtBox.Location = new System.Drawing.Point(772, 484);
             this.ReadPDTxtBox.Name = "ReadPDTxtBox";
             this.ReadPDTxtBox.ReadOnly = true;
-            this.ReadPDTxtBox.Size = new System.Drawing.Size(87, 21);
+            this.ReadPDTxtBox.Size = new System.Drawing.Size(144, 21);
             this.ReadPDTxtBox.TabIndex = 35;
             // 
             // chart1
@@ -441,12 +442,13 @@
             chartArea1.Position.Height = 100F;
             chartArea1.Position.Width = 100F;
             this.chart1.ChartAreas.Add(chartArea1);
+            this.chart1.Cursor = System.Windows.Forms.Cursors.SizeNS;
             legend1.Font = new System.Drawing.Font("Courier New", 12F, System.Drawing.FontStyle.Bold, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
             legend1.IsTextAutoFit = false;
             legend1.Name = "Legend1";
             legend1.TitleFont = null;
             this.chart1.Legends.Add(legend1);
-            this.chart1.Location = new System.Drawing.Point(34, 92);
+            this.chart1.Location = new System.Drawing.Point(12, 92);
             this.chart1.Name = "chart1";
             this.chart1.Palette = System.Windows.Forms.DataVisualization.Charting.ChartColorPalette.None;
             series1.ChartArea = "ChartArea1";
@@ -454,26 +456,13 @@
             series1.Legend = "Legend1";
             series1.Name = "Series1";
             this.chart1.Series.Add(series1);
-            this.chart1.Size = new System.Drawing.Size(875, 386);
+            this.chart1.Size = new System.Drawing.Size(897, 386);
             this.chart1.TabIndex = 36;
             this.chart1.Text = "chart1";
             this.chart1.MouseDown += new System.Windows.Forms.MouseEventHandler(this.Chart1_MouseDown);
             this.chart1.MouseMove += new System.Windows.Forms.MouseEventHandler(this.Chart1_MouseMove);
             this.chart1.MouseUp += new System.Windows.Forms.MouseEventHandler(this.Chart1_MouseUp);
             this.chart1.MouseWheel += new System.Windows.Forms.MouseEventHandler(this.Chart1_MouseWheel);
-            // 
-            // ReadPDRBtn
-            // 
-            this.ReadPDRBtn.AutoSize = true;
-            this.ReadPDRBtn.Font = new System.Drawing.Font("Courier New", 12F, System.Drawing.FontStyle.Bold, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
-            this.ReadPDRBtn.Location = new System.Drawing.Point(865, 484);
-            this.ReadPDRBtn.Name = "ReadPDRBtn";
-            this.ReadPDRBtn.Size = new System.Drawing.Size(46, 22);
-            this.ReadPDRBtn.TabIndex = 37;
-            this.ReadPDRBtn.TabStop = true;
-            this.ReadPDRBtn.Text = "PD";
-            this.ReadPDRBtn.UseVisualStyleBackColor = true;
-            this.ReadPDRBtn.Click += new System.EventHandler(this.ReadPDRBtn_Click);
             // 
             // contextMenuStrip1
             // 
@@ -489,6 +478,30 @@
             this.toolStripMenuItem1.Text = "清除数据";
             this.toolStripMenuItem1.MouseDown += new System.Windows.Forms.MouseEventHandler(this.ToolStripMenuItem1_MouseDown);
             // 
+            // PDBox
+            // 
+            this.PDBox.AutoSize = true;
+            this.PDBox.Font = new System.Drawing.Font("Courier New", 12F, System.Drawing.FontStyle.Bold, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
+            this.PDBox.Location = new System.Drawing.Point(772, 509);
+            this.PDBox.Name = "PDBox";
+            this.PDBox.Size = new System.Drawing.Size(47, 22);
+            this.PDBox.TabIndex = 39;
+            this.PDBox.Text = "PD";
+            this.PDBox.UseVisualStyleBackColor = true;
+            this.PDBox.CheckedChanged += new System.EventHandler(this.PDBox_CheckedChanged);
+            // 
+            // PClosedLoopBox2
+            // 
+            this.PClosedLoopBox2.AutoSize = true;
+            this.PClosedLoopBox2.Font = new System.Drawing.Font("黑体", 12F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
+            this.PClosedLoopBox2.Location = new System.Drawing.Point(825, 511);
+            this.PClosedLoopBox2.Name = "PClosedLoopBox2";
+            this.PClosedLoopBox2.Size = new System.Drawing.Size(91, 20);
+            this.PClosedLoopBox2.TabIndex = 40;
+            this.PClosedLoopBox2.Text = "功率闭环";
+            this.PClosedLoopBox2.UseVisualStyleBackColor = true;
+            this.PClosedLoopBox2.CheckedChanged += new System.EventHandler(this.CheckBox2_CheckedChanged);
+            // 
             // NMRG_VCSEL
             // 
             this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.None;
@@ -496,7 +509,8 @@
             this.BackColor = System.Drawing.SystemColors.Control;
             this.BackgroundImageLayout = System.Windows.Forms.ImageLayout.None;
             this.ClientSize = new System.Drawing.Size(1037, 774);
-            this.Controls.Add(this.ReadPDRBtn);
+            this.Controls.Add(this.PClosedLoopBox2);
+            this.Controls.Add(this.PDBox);
             this.Controls.Add(this.ReadPDTxtBox);
             this.Controls.Add(this.chart1);
             this.Controls.Add(this.label11);
@@ -558,9 +572,10 @@
         private System.Windows.Forms.Label label11;
         private System.Windows.Forms.TextBox ReadPDTxtBox;
         private System.Windows.Forms.DataVisualization.Charting.Chart chart1;
-        private System.Windows.Forms.RadioButton ReadPDRBtn;
         private System.Windows.Forms.ContextMenuStrip contextMenuStrip1;
         private System.Windows.Forms.ToolStripMenuItem toolStripMenuItem1;
+        private System.Windows.Forms.CheckBox PDBox;
+        private System.Windows.Forms.CheckBox PClosedLoopBox2;
     }
 }
 

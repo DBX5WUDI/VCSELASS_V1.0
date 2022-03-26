@@ -1,8 +1,10 @@
-﻿using System;
+﻿//#define Console 
+using System;
 using System.Drawing;
 using System.Text;
 using System.Windows.Forms;
 using System.IO.Ports;
+
 
 namespace WindowsFormsApplication1
 {
@@ -11,40 +13,45 @@ namespace WindowsFormsApplication1
         private WMD wmd = new WMD();
         private Time t = new Time();
         private Key ky = new Key();
+        private Vcsel vcsel = new Vcsel();
+        private Photodetector PD = new Photodetector();
+        private PID pid1 = new PID();
+
+        private Single ControlBias;
         private Single GlobalAngle1 = 0;
         private Single GlobalAngle2 = 0;
-        private Single VcselBias = 0;
-        private Single PDVoltage = 0;
         private BUTTON button;
         private WMD_STATE wmd_state;
         private MESSAGE_STATE message_state;
         private MESSAGE message;
         private bool MessageUpdateFlag;
-        private bool rbcheck = true;
+        private bool rbcheck = false;
+        private bool PClosedLoopFlag = false;
         private uint MessageCheckNum;
         private uint iGlobal = 0;
-        private ushort PDValue = 0;
         private ushort ByteCount;
         private ushort MessageLength;
-        private string[]s = new string[5];
+        private string[] s = new string[5];
         private System.Timers.Timer timer = new System.Timers.Timer(100);      //初始化定时器类
 
         public NMRG_VCSEL()             //构造函数
         {
             InitializeComponent();
             InitChart();
+#if Console
+            Console.ForegroundColor = ConsoleColor.Magenta;
+#endif
             CheckForIllegalCrossThreadCalls = false;
             string[] ports = SerialPort.GetPortNames();             //初始化串口类
             Array.Sort(ports);
             timer.Elapsed += new System.Timers.ElapsedEventHandler(theout); //到达时间的时候执行事件；
             timer.AutoReset = true;                                         //设置是执行一次（false）还是一直执行(true)；
             timer.Enabled = false;                                          //是否执行System.Timers.Timer.Elapsed事件；
-
             srlboBox.Items.Clear();
             srlboBox.Items.AddRange(ports);
             SetVcselSinep2pTxtBoxCurrent.Text = Convert.ToSingle(0.00).ToString("f6");
             SetVcselSinep2pTxtBox.Text = Convert.ToSingle(0.00).ToString("f6");
-            SetVcselBiasTxtBox .Text = Convert.ToSingle(0.00).ToString("f6");
+            SetVcselBiasTxtBox.Text = Convert.ToSingle(0.00).ToString("f6");
             SetVcselBiasTxtBoxCurrent.Text = Convert.ToSingle(0.00).ToString("f6");
             SetVcselSinefreTxtBox.Text = Convert.ToSingle(0.00).ToString("f6");
             message.data = new Byte[10];
@@ -58,8 +65,8 @@ namespace WindowsFormsApplication1
                     {
                         message_state = MESSAGE_STATE.WAITING_FF2;
                         MessageCheckNum = 0;
-                        MessageLength   = 0;
-                        ByteCount       = 0;
+                        MessageLength = 0;
+                        ByteCount = 0;
                         MessageCheckNum += data;
                     }
                     break;
@@ -102,6 +109,7 @@ namespace WindowsFormsApplication1
                     MessageCheckNum += data;
                     MessageLength |= (ushort)(data);
                     message.length = MessageLength;
+                    if(MessageLength>20) message_state = MESSAGE_STATE.WAITING_FF1;//提高串口通讯稳定性，关键语句
                     break;
                 case MESSAGE_STATE.RECEIVE_PACKAGE:
                     MessageCheckNum += data;
@@ -173,18 +181,40 @@ namespace WindowsFormsApplication1
                     strRcv += receivedData[i].ToString("X2");  //16进制显示  
                     strRcv += "\r\n";
                     MessageUpdateFlag = receiveFiniteStates(receivedData[i]);
-                    if(MessageUpdateFlag == true)
+                    if (MessageUpdateFlag == true)
                     {
                         MessageUpdateFlag = false;
                         if (message.data[0] == (Byte)0x04)
                         {
-                            PDValue = (ushort)((message.data[2] << 8) | (message.data[1]));
-                            PDVoltage = (Single)(3.30 * PDValue / 4096);
-                            this.chart1.Series[0].Points.AddXY((iGlobal + 1), PDVoltage);
+                            PD.value1 = (ushort)((message.data[2] << 8) | (message.data[1]));
+                            PD.voltage1 = (Single)(3.30 * PD.value1 / 4096);
+
+                            if (PClosedLoopFlag)
+                            {
+                                pid1.ActualValue = PD.voltage1;
+                                ControlBias = pid1.Calculate();
+                                if (ControlBias > 0.05) ControlBias = 0.05F;
+                                if (ControlBias < -0.05) ControlBias = -0.05F;
+                                vcsel.voltage_biasundercontrol = ControlBias + vcsel.voltage_bias;
+                                if (vcsel.voltage_biasundercontrol < 0) vcsel.voltage_biasundercontrol = 0;
+                                SetVcselBiasTxtBox.Text = vcsel.voltage_biasundercontrol.ToString("f6");
+                                SetVcselBiasTxtBoxCurrent.Text = (2 * vcsel.voltage_biasundercontrol).ToString("f6");
+                                button = BUTTON.SET_VCSEL_BIAS;
+                                robot_control();
+                            }
+                            this.chart1.Series[0].Points.AddXY(iGlobal + 1, PD.voltage1);
+                            /*if (iGlobal % 50 == 0)
+                            {
+                                this.chart1.Series[0].Points.AddXY(iGlobal / 50 + 1, PD.voltage1);
+#if Console
+
+                                Console.WriteLine("{0}   {1}   {2}   {3}   {4}", (iGlobal/5+1).ToString("0000"), pid1.ExpectedValue.ToString("f6"), PD.voltage1.ToString("f6"), vcsel.voltage_bias.ToString("f6"), vcsel.voltage_biasundercontrol.ToString("f6"));
+#endif
+                            }*/
                             iGlobal++;
+
                         }
-                        ReadPDTxtBox.Text = PDVoltage.ToString();
-                        //PDValue = message.data[];
+                        ReadPDTxtBox.Text = PD.voltage1.ToString("f6") + "|" + pid1.ExpectedValue.ToString("f6");
                     }
                 }
                 rcvtxtBox.Text = strRcv; //+ "\r\n";
@@ -195,7 +225,7 @@ namespace WindowsFormsApplication1
             catch (System.Exception ex)
             {
                 MessageBox.Show(ex.Message, "出错提示");
-            }  
+            }
         }
         private void serialPort1_sendStr(string sndtxt)
         {
@@ -254,14 +284,14 @@ namespace WindowsFormsApplication1
         private void robot_control()
         {
             string SendBuf = "";
-            byte [][]bb=new byte[5][];
+            byte[][] bb = new byte[5][];
             int sum;
 
             switch (button)
-            { 
-                case(BUTTON.SHAKING_HANDS):
-                    SendBuf= "FF FF 01 11 00 0D 00 00 00 00 00 00 00 00 00 00 00 00 00 1F";
-                break;
+            {
+                case (BUTTON.SHAKING_HANDS):
+                    SendBuf = "FF FF 01 11 00 0D 00 00 00 00 00 00 00 00 00 00 00 00 00 1F";
+                    break;
 
                 case (BUTTON.SET_VCSEL_BIAS):
                     string_deal(SetVcselBiasTxtBox.Text);             //这些TextBox的name不能太长
@@ -270,7 +300,7 @@ namespace WindowsFormsApplication1
                         MessageBox.Show("请输入正确的数据长度");
                         return;
                     }
-                    SetVcselBiasTxtBoxCurrent.Text = (2 * Convert.ToSingle(s[0])).ToString("f6");
+                    //SetVcselBiasTxtBoxCurrent.Text = (2 * Convert.ToSingle(s[0])).ToString("f6");
                     sum = 1 + 17 + 5 + 1;
                     bb[0] = BitConverter.GetBytes(Convert.ToSingle(s[0]));
                     SendBuf = "FF FF 01 11 00 05 01 ";
@@ -293,7 +323,7 @@ namespace WindowsFormsApplication1
                         MessageBox.Show("请输入正确的数据长度");
                         return;
                     }
-                    SetVcselSinep2pTxtBoxCurrent.Text = (2*Convert.ToSingle(s[0])).ToString("f6");
+                    SetVcselSinep2pTxtBoxCurrent.Text = (2 * Convert.ToSingle(s[0])).ToString("f6");
                     sum = 1 + 17 + 5 + 2;
                     bb[0] = BitConverter.GetBytes(Convert.ToSingle(s[0]));
                     SendBuf = "FF FF 01 11 00 05 02 ";
@@ -334,32 +364,32 @@ namespace WindowsFormsApplication1
                     break;
 
             }
-            Array.Clear(bb,0,bb.Length);//清除数组中的内容
+            Array.Clear(bb, 0, bb.Length);//清除数组中的内容
             Array.Clear(s, 0, s.Length);
             SendBuftxtBox.Text = SendBuf.Replace(" ", "\r\n");
             serialPort1_sendStr(SendBuf);
         }
-        void string_deal(string str)
+        private void string_deal(string str)
         {
-           str = new System.Text.RegularExpressions.Regex("[\\s]+").Replace(str, " ");
-           if (str == "")
-           {
-               MessageBox.Show("请添入数据");
-               return;
-           }
-           if (str.EndsWith(" "))
-           {
-               MessageBox.Show("请删除数据后的空格");
-               return;
-           }
-               s=str.Split(' ');
+            str = new System.Text.RegularExpressions.Regex("[\\s]+").Replace(str, " ");
+            if (str == "")
+            {
+                MessageBox.Show("请添入数据");
+                return;
+            }
+            if (str.EndsWith(" "))
+            {
+                MessageBox.Show("请删除数据后的空格");
+                return;
+            }
+            s = str.Split(' ');
         }
         private void ShakeHandsbtn_Click(object sender, EventArgs e)
         {
             button = BUTTON.SHAKING_HANDS;
             robot_control();
         }
-        /* private void SetVcselBiasBtn_Click(object sender, EventArgs e)
+        /*private void SetVcselBiasBtn_Click(object sender, EventArgs e)
         {
             button = BUTTON.SET_VCSEL_BIAS;
             robot_control();
@@ -374,21 +404,6 @@ namespace WindowsFormsApplication1
             button = BUTTON.SET_VCSEL_SINEFRE;
             robot_control();
         }
-        private void ReadPDRBtn_Click(object sender, EventArgs e)
-        {
-            if (rbcheck)
-            {
-                ReadPDRBtn.Checked = false;
-                rbcheck = false;
-                timer.Enabled = false;
-            }
-            else
-            {
-                ReadPDRBtn.Checked = true;
-                rbcheck = true;
-                timer.Enabled = true;
-            }
-        }
         private void theout(object source, System.Timers.ElapsedEventArgs e)
         {
             button = BUTTON.READ_PD;
@@ -396,9 +411,9 @@ namespace WindowsFormsApplication1
         }
         private void WMDUpdate()
         {
-            VcselBias = GlobalAngle1 * Convert.ToSingle(0.004) + GlobalAngle2 * Convert.ToSingle(0.0002);
-            SetVcselBiasTxtBox.Text = VcselBias.ToString("f6");
-            //SetVcselBiasTxtBoxCurrent.Text = (2*VcselBias).ToString("f6");
+            vcsel.voltage_bias = GlobalAngle1 * Convert.ToSingle(0.004) + GlobalAngle2 * Convert.ToSingle(0.0002);
+            SetVcselBiasTxtBox.Text = vcsel.voltage_bias.ToString("f6");
+            SetVcselBiasTxtBoxCurrent.Text = (2 * vcsel.voltage_bias).ToString("f6");
             button = BUTTON.SET_VCSEL_BIAS;
             robot_control();
         }
@@ -439,8 +454,8 @@ namespace WindowsFormsApplication1
                 else { MessageBox.Show("请打开串口"); }
                 wmd_state = WMD_STATE.FREE;
             }
-            
-            
+
+
         }
         private void PictureBox2_MouseClick(object sender, MouseEventArgs e)
         {
@@ -479,7 +494,7 @@ namespace WindowsFormsApplication1
                 else { MessageBox.Show("请打开串口"); }
                 wmd_state = WMD_STATE.FREE;
             }
-            
+
         }
         private void SetVcselBiasTo0_Click(object sender, EventArgs e)
         {
@@ -539,7 +554,7 @@ namespace WindowsFormsApplication1
             ky.KeyConfineNum(sender, e);
             if (e.KeyChar == (char)13)
             {
-                SetVcselSinep2pBtn_Click(sender,e);
+                SetVcselSinep2pBtn_Click(sender, e);
             }
         }
         private void SetVcselSinep2pTxtBox_PreviewKeyDown(object sender, PreviewKeyDownEventArgs e)
@@ -557,6 +572,37 @@ namespace WindowsFormsApplication1
         private void SetVcselSinefreTxtBox_PreviewKeyDown(object sender, PreviewKeyDownEventArgs e)
         {
             ky.KeyUpDown(e, SetVcselSinefreTxtBox);
+        }
+        private void PDBox_CheckedChanged(object sender, EventArgs e)
+        {
+            if (rbcheck)
+            {
+                rbcheck = false;
+                timer.Enabled = false;
+            }
+            else
+            {
+                rbcheck = true;
+                timer.Enabled = true;
+            }
+        }
+        private void CheckBox2_CheckedChanged(object sender, EventArgs e)
+        {
+            if (PClosedLoopFlag)
+            {
+                PClosedLoopFlag = false;
+                ControlBias = 0F;
+                pid1.Reset();
+                SetVcselBiasTxtBox.Text = vcsel.voltage_bias.ToString("f6");
+                SetVcselBiasTxtBoxCurrent.Text = (2 * vcsel.voltage_bias).ToString("f6");
+                button = BUTTON.SET_VCSEL_BIAS;
+                robot_control();
+            }
+            else
+            {
+                PClosedLoopFlag = true;
+                pid1.ExpectedValue = PD.voltage1;
+            }
         }
 
 

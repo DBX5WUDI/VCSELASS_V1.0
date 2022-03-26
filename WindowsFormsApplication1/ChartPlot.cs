@@ -1,4 +1,5 @@
-﻿using System.Drawing;
+﻿using System;
+using System.Drawing;
 using System.Windows.Forms;
 using System.Windows.Forms.DataVisualization.Charting;
 
@@ -27,7 +28,7 @@ namespace WindowsFormsApplication1
             this.chart1.ChartAreas[0].AxisY.MajorGrid.Enabled = false;
             this.chart1.ChartAreas[0].AxisY.LabelStyle.Font = new System.Drawing.Font("Courier New", 12F, System.Drawing.FontStyle.Bold);
             this.chart1.ChartAreas[0].AxisY.ScaleView.Size = 0.1;
-            this.chart1.ChartAreas[0].AxisY.LabelStyle.Format = @"{0:0.00}";
+            this.chart1.ChartAreas[0].AxisY.LabelStyle.Format = @"{0:0.000}";
             this.chart1.ChartAreas[0].Position.X = 0F;
             this.chart1.ChartAreas[0].Position.Y = 0F;
             this.chart1.ChartAreas[0].Position.Height = 100F;
@@ -41,6 +42,7 @@ namespace WindowsFormsApplication1
             //设置图表显示样式
             this.chart1.Series[0].Color = Color.BlueViolet;
             this.chart1.Series[0].ChartType = SeriesChartType.Line;
+            this.chart1.Series[0].BorderWidth = 3;
             this.chart1.Series[0].Points.Clear();
         }
         private void Chart1_MouseDown(object sender, MouseEventArgs e)
@@ -66,7 +68,7 @@ namespace WindowsFormsApplication1
 
         private void Chart1_MouseWheel(object sender, MouseEventArgs e)
         {
-            this.chart1.ChartAreas[0].AxisY.IsLabelAutoFit = false;
+            //this.chart1.ChartAreas[0].AxisY.IsLabelAutoFit = false;
             if (e.Delta < 0&&chart1.ChartAreas[0].AxisY.ScaleView.Size > 0) // 防止越过左边界
             {
                 chart1.ChartAreas[0].AxisY.ScaleView.Size *= 1.1; //+= 0.1*(e.Delta / 120); // 每次缩放1
@@ -79,6 +81,7 @@ namespace WindowsFormsApplication1
         private void ToolStripMenuItem1_MouseDown(object sender, MouseEventArgs e)
         {
             chart1.Series[0].Points.Clear();
+            iGlobal = 0;
             contextMenuStrip1.Close();
         }
         private void Chart1_MouseMove(object sender, MouseEventArgs e)
@@ -86,9 +89,9 @@ namespace WindowsFormsApplication1
             if (isMouseDown)
             {
                 if (lastMove != 0 && e.Y - lastMove > 0)
-                    chart1.ChartAreas[0].AxisY.ScaleView.Position += 0.01*chart1.ChartAreas[0].AxisY.ScaleView.Size;  // 每次向右移动1
+                    chart1.ChartAreas[0].AxisY.ScaleView.Position += 0.007*chart1.ChartAreas[0].AxisY.ScaleView.Size;  // 每次向右移动1
                 else if (lastMove != 0 && e.Y - lastMove < 0)
-                    chart1.ChartAreas[0].AxisY.ScaleView.Position -= 0.01* chart1.ChartAreas[0].AxisY.ScaleView.Size; // 每次向左移动1
+                    chart1.ChartAreas[0].AxisY.ScaleView.Position -= 0.007* chart1.ChartAreas[0].AxisY.ScaleView.Size; // 每次向左移动1
                 lastMove = e.Y;
             }
         }
